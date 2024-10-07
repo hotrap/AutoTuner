@@ -8,6 +8,8 @@
 #include <sstream>
 #include <thread>
 
+size_t calc_first_level_in_sd(const rocksdb::Options &options);
+
 void calc_fd_size_ratio(rocksdb::Options &options, size_t first_level_in_sd,
                         uint64_t max_viscnts_size);
 
