@@ -1,0 +1,51 @@
+#ifndef AUTOTUNER_H_
+#define AUTOTUNER_H_
+
+#include <rocksdb/db.h>
+#include <viscnts.h>
+
+#include <cmath>
+#include <sstream>
+#include <thread>
+
+void calc_fd_size_ratio(rocksdb::Options &options, size_t first_level_in_sd,
+                        uint64_t max_viscnts_size);
+
+std::vector<std::pair<uint64_t, uint32_t>> predict_level_assignment(
+    const rocksdb::Options &options);
+
+class AutoTuner {
+ public:
+  AutoTuner(rocksdb::DB &db, size_t first_level_in_sd,
+            uint64_t min_hot_set_size, uint64_t max_hot_set_size,
+            size_t wait_time_ns)
+      : db_(db),
+        first_level_in_sd_(first_level_in_sd),
+        wait_time_ns_(wait_time_ns),
+        min_hot_set_size_(min_hot_set_size),
+        max_hot_set_size_(max_hot_set_size) {
+    th_ = std::thread([&]() { update_thread(); });
+  }
+
+  ~AutoTuner() { Stop(); }
+
+  void Stop() {
+    stop_signal_ = true;
+    th_.join();
+  }
+
+ private:
+  void update_thread();
+
+  rocksdb::DB &db_;
+  const size_t first_level_in_sd_;
+
+  ssize_t wait_time_ns_;
+  uint64_t min_hot_set_size_;
+  uint64_t max_hot_set_size_;
+
+  bool stop_signal_{false};
+  std::thread th_;
+};
+
+#endif  // AUTOTUNER_H_
