@@ -8,8 +8,8 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 
 include_directories(
-	${ROCKSDB_INCLUDE}
-    ${VISCNTS_INCLUDE}
+	${ROCKSDB_INCLUDE_DIR}
+    ${RALT_INCLUDE_DIR}
 )
 
 file(GLOB_RECURSE HEADERS "include/*")
