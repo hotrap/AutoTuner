@@ -56,14 +56,14 @@ double calc_size_ratio(size_t a, double b) {
   return (max + min) / 2;
 }
 void calc_fd_size_ratio(rocksdb::Options &options, size_t first_level_in_sd,
-                        uint64_t max_viscnts_size) {
+                        uint64_t max_ralt_size) {
   options.max_bytes_for_level_multiplier_additional.clear();
   // It seems that L0 and L1 are not affected by
   // options.max_bytes_for_level_multiplier_additional
   if (first_level_in_sd <= 2) return;
 
-  assert(options.db_paths[0].target_size > max_viscnts_size);
-  uint64_t fd_size = options.db_paths[0].target_size - max_viscnts_size;
+  assert(options.db_paths[0].target_size > max_ralt_size);
+  uint64_t fd_size = options.db_paths[0].target_size - max_ralt_size;
   double ratio =
       calc_size_ratio(first_level_in_sd - 2,
                       (double)(fd_size - 2 * options.max_bytes_for_level_base) /
