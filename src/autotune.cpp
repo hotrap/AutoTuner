@@ -264,12 +264,10 @@ void AutoTuner::update_thread() {
         warming_up = false;
         ralt.SetMinHotSetSizeLimit(min_hot_set_size_);
       }
-      double hs_step = max_hot_set_size_ / 20.0;
       uint64_t real_phy_size = ralt.GetRealPhySize();
       std::cerr << "real_phy_size " << real_phy_size << '\n';
       auto rate = real_phy_size / (double)real_hot_set_size;
-      auto delta =
-          rate * hs_step;  // std::max<size_t>(rate * hs_step, (64 << 20));
+      auto delta = rate * max_unstable_record_size_;
       phy_size_limit = real_phy_size + delta;
       std::cerr << "rate " << rate << std::endl;
       ralt.SetPhysicalSizeLimit(phy_size_limit);

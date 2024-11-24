@@ -20,12 +20,13 @@ class AutoTuner {
  public:
   AutoTuner(rocksdb::DB &db, size_t first_level_in_sd,
             uint64_t min_hot_set_size, uint64_t max_hot_set_size,
-            size_t wait_time_ns = 20e9)
+            uint64_t max_unstable_record_size, size_t wait_time_ns = 20e9)
       : db_(db),
         first_level_in_sd_(first_level_in_sd),
         wait_time_ns_(wait_time_ns),
         min_hot_set_size_(min_hot_set_size),
-        max_hot_set_size_(max_hot_set_size) {
+        max_hot_set_size_(max_hot_set_size),
+        max_unstable_record_size_(max_unstable_record_size) {
     th_ = std::thread([&]() { update_thread(); });
   }
 
@@ -45,6 +46,7 @@ class AutoTuner {
   ssize_t wait_time_ns_;
   uint64_t min_hot_set_size_;
   uint64_t max_hot_set_size_;
+  uint64_t max_unstable_record_size_;
 
   bool stop_signal_{false};
   std::thread th_;
