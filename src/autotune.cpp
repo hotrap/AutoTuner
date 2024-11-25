@@ -286,7 +286,9 @@ void AutoTuner::update_thread() {
     if (warming_up) {
       max_hot_set_size = std::min(max_hot_set_size, initial_max_hot_set_size);
     } else {
-      max_hot_set_size = std::min(max_hot_set_size, max_hot_set_size_);
+      max_hot_set_size = std::min(
+          max_hot_set_size, (uint64_t)(max_hot_ratio_in_last_level_in_fd_ *
+                                       last_level_in_fd_size));
     }
     if (ralt.GetMaxHotSetSizeLimit() != max_hot_set_size) {
       std::cerr << "Update max hot set size limit: " << max_hot_set_size
