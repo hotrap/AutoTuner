@@ -1,7 +1,6 @@
 #ifndef AUTOTUNER_H_
 #define AUTOTUNER_H_
 
-#include <ralt.h>
 #include <rocksdb/db.h>
 
 #include <cmath>
@@ -26,7 +25,8 @@ class AutoTuner {
         wait_time_ns_(wait_time_ns),
         min_hot_set_size_(min_hot_set_size),
         max_hot_ratio_in_last_level_in_fd_(max_hot_ratio_in_last_level_in_fd),
-        max_unstable_record_size_(max_unstable_record_size) {
+        max_unstable_record_size_(max_unstable_record_size),
+        ralt_(db.GetOptions().ralt) {
     th_ = std::thread([&]() { update_thread(); });
   }
 
@@ -47,6 +47,9 @@ class AutoTuner {
   uint64_t min_hot_set_size_;
   double max_hot_ratio_in_last_level_in_fd_;
   uint64_t max_unstable_record_size_;
+
+  // To make sure that RALT is not deleted while the autotuner is running.
+  std::shared_ptr<rocksdb::RALT> ralt_;
 
   bool stop_signal_{false};
   std::thread th_;

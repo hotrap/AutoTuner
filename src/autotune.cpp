@@ -1,4 +1,5 @@
 #include <autotuner.h>
+#include <ralt.h>
 
 #include <iostream>
 
@@ -234,7 +235,7 @@ std::vector<std::pair<uint64_t, uint32_t>> predict_level_assignment(
 
 void AutoTuner::update_thread() {
   rocksdb::Options options = db_.GetOptions();
-  RALT &ralt = *static_cast<RALT *>(options.ralt);
+  RALT &ralt = *static_cast<RALT *>(ralt_.get());
 
   const uint64_t initial_max_hot_set_size = ralt.GetMaxHotSetSizeLimit();
   std::cerr << "Initial max hot set size: " << initial_max_hot_set_size
