@@ -268,9 +268,9 @@ void AutoTuner::update_thread() {
       uint64_t real_phy_size = ralt.GetRealPhySize();
       std::cerr << "real_phy_size " << real_phy_size << '\n';
       auto rate = real_phy_size / (double)real_hot_set_size;
+      std::cerr << "rate " << rate << std::endl;
       auto delta = rate * max_unstable_record_size_;
       phy_size_limit = real_phy_size + delta;
-      std::cerr << "rate " << rate << std::endl;
       ralt.SetPhysicalSizeLimit(phy_size_limit);
       std::cerr << "Update physical size limit: " << phy_size_limit
                 << std::endl;
