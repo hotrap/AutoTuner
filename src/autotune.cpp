@@ -61,6 +61,7 @@ void calc_fd_size_ratio(rocksdb::Options &options, size_t first_level_in_sd,
   options.max_bytes_for_level_multiplier_additional.clear();
   // It seems that L0 and L1 are not affected by
   // options.max_bytes_for_level_multiplier_additional
+  options.max_bytes_for_level_multiplier_additional.push_back(1.0);
   if (first_level_in_sd <= 2) return;
 
   assert(options.db_paths[0].target_size > max_ralt_size);
@@ -71,8 +72,6 @@ void calc_fd_size_ratio(rocksdb::Options &options, size_t first_level_in_sd,
                           options.max_bytes_for_level_base);
   // Multiply 0.999 to make room for floating point error
   ratio *= 0.999;
-  assert(options.max_bytes_for_level_multiplier_additional.empty());
-  options.max_bytes_for_level_multiplier_additional.push_back(1.0);
   for (size_t i = 2; i < first_level_in_sd; ++i) {
     options.max_bytes_for_level_multiplier_additional.push_back(
         ratio / options.max_bytes_for_level_multiplier);
@@ -235,18 +234,21 @@ std::vector<std::pair<uint64_t, uint32_t>> predict_level_assignment(
 
 void AutoTuner::update_thread() {
   rocksdb::Options options = db_.GetOptions();
-  ralt::RALT &ralt = *static_cast<ralt::RALT *>(ralt_.get());
+  ralt::RALT *ralt = static_cast<ralt::RALT *>(ralt_.get());
 
-  const uint64_t initial_max_hot_set_size = ralt.GetMaxHotSetSizeLimit();
-  std::cerr << "Initial max hot set size: " << initial_max_hot_set_size
-            << std::endl;
+  const uint64_t initial_max_hot_set_size =
+      ralt ? ralt->GetMaxHotSetSizeLimit() : 0;
+  uint64_t phy_size_limit = ralt ? ralt->GetPhySizeLimit() : 0;
+  if (ralt) {
+    std::cerr << "Initial max hot set size: " << initial_max_hot_set_size
+              << std::endl;
 
-  const uint64_t initial_hot_set_size_limit = ralt.GetHotSetSizeLimit();
-  std::cerr << "Initial hot set size limit: " << initial_hot_set_size_limit
-            << std::endl;
+    const uint64_t initial_hot_set_size_limit = ralt->GetHotSetSizeLimit();
+    std::cerr << "Initial hot set size limit: " << initial_hot_set_size_limit
+              << std::endl;
 
-  uint64_t phy_size_limit = ralt.GetPhySizeLimit();
-  std::cerr << "Initial physical size limit: " << phy_size_limit << std::endl;
+    std::cerr << "Initial physical size limit: " << phy_size_limit << std::endl;
+  }
 
   const size_t last_level_in_fd = first_level_in_sd_ - 1;
   std::vector<double> ori_multiplier_additional =
@@ -258,54 +260,63 @@ void AutoTuner::update_thread() {
     if (stop_signal_) {
       break;
     }
-    uint64_t real_hot_set_size = ralt.GetRealHotSetSize();
-    if (ralt.DecayCount() > 10) {
-      if (first) {
-        first = false;
-        warming_up = false;
-        ralt.SetMinHotSetSizeLimit(min_hot_set_size_);
+    if (ralt) {
+      uint64_t real_hot_set_size = ralt->GetRealHotSetSize();
+      if (ralt->DecayCount() > 10) {
+        if (first) {
+          first = false;
+          warming_up = false;
+          ralt->SetMinHotSetSizeLimit(min_hot_set_size_);
+        }
+        uint64_t real_phy_size = ralt->GetRealPhySize();
+        std::cerr << "real_phy_size " << real_phy_size << '\n';
+        auto rate = real_phy_size / (double)real_hot_set_size;
+        std::cerr << "rate " << rate << std::endl;
+        auto delta = rate * max_unstable_record_size_;
+        uint64_t phy_size_limit = real_phy_size + delta;
+        ralt->SetPhysicalSizeLimit(phy_size_limit);
+        std::cerr << "Update physical size limit: " << phy_size_limit
+                  << std::endl;
       }
-      uint64_t real_phy_size = ralt.GetRealPhySize();
-      std::cerr << "real_phy_size " << real_phy_size << '\n';
-      auto rate = real_phy_size / (double)real_hot_set_size;
-      std::cerr << "rate " << rate << std::endl;
-      auto delta = rate * max_unstable_record_size_;
-      phy_size_limit = real_phy_size + delta;
-      ralt.SetPhysicalSizeLimit(phy_size_limit);
-      std::cerr << "Update physical size limit: " << phy_size_limit
-                << std::endl;
-    }
-    calc_fd_size_ratio(options, first_level_in_sd_, phy_size_limit);
-    assert(first_level_in_sd_ > 0);
-    uint64_t last_level_in_fd_size =
-        predict_level_assignment(options)[last_level_in_fd].first;
-    uint64_t min_effective_size_of_last_level_in_fd =
-        last_level_in_fd_size / options.max_bytes_for_level_multiplier;
-    // to avoid making the size of the first level in the slow disk too small
-    uint64_t max_hot_set_size =
-        last_level_in_fd_size - min_effective_size_of_last_level_in_fd;
-    if (warming_up) {
-      max_hot_set_size = std::min(max_hot_set_size, initial_max_hot_set_size);
-    } else {
-      max_hot_set_size = std::min(
-          max_hot_set_size, (uint64_t)(max_hot_ratio_in_last_level_in_fd_ *
-                                       last_level_in_fd_size));
-    }
-    if (ralt.GetMaxHotSetSizeLimit() != max_hot_set_size) {
-      std::cerr << "Update max hot set size limit: " << max_hot_set_size
-                << std::endl;
-      ralt.SetMaxHotSetSizeLimit(max_hot_set_size);
-    }
+      calc_fd_size_ratio(options, first_level_in_sd_, phy_size_limit);
+      assert(first_level_in_sd_ > 0);
+      uint64_t last_level_in_fd_size =
+          predict_level_assignment(options)[last_level_in_fd].first;
+      uint64_t min_effective_size_of_last_level_in_fd =
+          last_level_in_fd_size / options.max_bytes_for_level_multiplier;
+      // to avoid making the size of the first level in the slow disk too small
+      uint64_t max_hot_set_size =
+          last_level_in_fd_size - min_effective_size_of_last_level_in_fd;
+      if (warming_up) {
+        max_hot_set_size = std::min(max_hot_set_size, initial_max_hot_set_size);
+      } else {
+        max_hot_set_size = std::min(
+            max_hot_set_size, (uint64_t)(max_hot_ratio_in_last_level_in_fd_ *
+                                         last_level_in_fd_size));
+      }
+      if (ralt->GetMaxHotSetSizeLimit() != max_hot_set_size) {
+        std::cerr << "Update max hot set size limit: " << max_hot_set_size
+                  << std::endl;
+        ralt->SetMaxHotSetSizeLimit(max_hot_set_size);
+      }
 
-    uint64_t hot_set_size;
-    if (warming_up) {
-      hot_set_size = real_hot_set_size;
+      uint64_t hot_set_size;
+      if (warming_up) {
+        hot_set_size = real_hot_set_size;
+      } else {
+        hot_set_size = ralt->GetHotSetSizeLimit();
+        std::cerr << "hot set size limit: " << hot_set_size << std::endl;
+      }
+      calc_sd_size_ratio(options, db_, last_level_in_fd, last_level_in_fd_size,
+                         hot_set_size);
     } else {
-      hot_set_size = ralt.GetHotSetSizeLimit();
-      std::cerr << "hot set size limit: " << hot_set_size << std::endl;
+      calc_fd_size_ratio(options, first_level_in_sd_, 0);
+      assert(first_level_in_sd_ > 0);
+      uint64_t last_level_in_fd_size =
+          predict_level_assignment(options)[last_level_in_fd].first;
+      calc_sd_size_ratio(options, db_, last_level_in_fd, last_level_in_fd_size,
+                         0);
     }
-    calc_sd_size_ratio(options, db_, last_level_in_fd, last_level_in_fd_size,
-                       hot_set_size);
     if (should_update_max_bytes_for_level_multiplier_additional(
             ori_multiplier_additional,
             options.max_bytes_for_level_multiplier_additional)) {
