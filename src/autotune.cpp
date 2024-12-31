@@ -326,7 +326,7 @@ void AutoTuner::update_thread() {
       std::ostringstream out;
       for (size_t i = 0; i < ori_multiplier_additional.size(); ++i) {
         out << ori_multiplier_additional[i];
-        if (i != ori_multiplier_additional.size()) {
+        if (i != ori_multiplier_additional.size() - 1) {
           out << ':';
         }
       }
