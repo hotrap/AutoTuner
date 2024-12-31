@@ -256,10 +256,6 @@ void AutoTuner::update_thread() {
   bool warming_up = true;
   bool first = true;
   while (!stop_signal_) {
-    std::this_thread::sleep_for(std::chrono::nanoseconds(wait_time_ns_));
-    if (stop_signal_) {
-      break;
-    }
     if (ralt) {
       uint64_t real_hot_set_size = ralt->GetRealHotSetSize();
       if (ralt->DecayCount() > 10) {
@@ -335,5 +331,6 @@ void AutoTuner::update_thread() {
                 << std::endl;
       db_.SetOptions({{"max_bytes_for_level_multiplier_additional", str}});
     }
+    std::this_thread::sleep_for(std::chrono::nanoseconds(wait_time_ns_));
   }
 }
