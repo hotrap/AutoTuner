@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-size_t calc_first_level_in_sd(const rocksdb::Options &options) {
+size_t calc_first_level_in_last_tier(const rocksdb::Options &options) {
   uint64_t fd_size = options.db_paths[0].target_size;
   size_t level = 0;
   uint64_t level_size = options.max_bytes_for_level_base;
