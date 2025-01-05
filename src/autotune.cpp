@@ -277,7 +277,7 @@ void AutoTuner::update_thread() {
       calc_fd_size_ratio(options, first_level_in_sd_, phy_size_limit);
       assert(first_level_in_sd_ > 0);
       uint64_t last_level_in_fd_size =
-          predict_level_assignment(options)[last_level_in_fd].first;
+          predict_level_assignment(options).at(last_level_in_fd).first;
       uint64_t min_effective_size_of_last_level_in_fd =
           last_level_in_fd_size / options.max_bytes_for_level_multiplier;
       // to avoid making the size of the first level in the slow disk too small
@@ -309,7 +309,7 @@ void AutoTuner::update_thread() {
       calc_fd_size_ratio(options, first_level_in_sd_, 0);
       assert(first_level_in_sd_ > 0);
       uint64_t last_level_in_fd_size =
-          predict_level_assignment(options)[last_level_in_fd].first;
+          predict_level_assignment(options).at(last_level_in_fd).first;
       calc_sd_size_ratio(options, db_, last_level_in_fd, last_level_in_fd_size,
                          0);
     }
