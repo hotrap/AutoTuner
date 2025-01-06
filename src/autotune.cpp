@@ -295,16 +295,8 @@ void AutoTuner::update_thread() {
                   << std::endl;
         ralt->SetMaxHotSetSizeLimit(max_hot_set_size);
       }
-
-      uint64_t hot_set_size;
-      if (warming_up) {
-        hot_set_size = real_hot_set_size;
-      } else {
-        hot_set_size = ralt->GetRealHotSetSize();
-        std::cerr << "real hot set size: " << hot_set_size << std::endl;
-      }
       calc_sd_size_ratio(options, db_, last_level_in_fd, last_level_in_fd_size,
-                         hot_set_size);
+                         real_hot_set_size);
     } else {
       calc_fd_size_ratio(options, first_level_in_sd_, 0);
       assert(first_level_in_sd_ > 0);
