@@ -254,16 +254,17 @@ void AutoTuner::update_thread() {
   std::vector<double> ori_multiplier_additional =
       options.max_bytes_for_level_multiplier_additional;
   bool warming_up = true;
-  bool first = true;
   while (!stop_signal_) {
     if (ralt) {
       uint64_t real_hot_set_size = ralt->GetRealHotSetSize();
-      if (ralt->DecayCount() > 10) {
-        if (first) {
-          first = false;
+      if (warming_up) {
+        // Require DecayCount > 0 so that RealPhySize is updated.
+        if (ralt->DecayCount() > 0 &&
+            ralt->access_bytes() > ralt->GetMaxHotSetSizeLimit() * 5) {
           warming_up = false;
-          ralt->SetMinHotSetSizeLimit(min_hot_set_size_);
         }
+      }
+      if (!warming_up) {
         uint64_t real_phy_size = ralt->GetRealPhySize();
         std::cerr << "real_phy_size " << real_phy_size << '\n';
         auto rate = real_phy_size / (double)real_hot_set_size;
