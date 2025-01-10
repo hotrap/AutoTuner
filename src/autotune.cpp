@@ -238,7 +238,6 @@ void AutoTuner::update_thread() {
 
   const uint64_t initial_max_hot_set_size =
       ralt ? ralt->GetMaxHotSetSizeLimit() : 0;
-  uint64_t phy_size_limit = ralt ? ralt->GetPhySizeLimit() : 0;
   if (ralt) {
     std::cerr << "Initial max hot set size: " << initial_max_hot_set_size
               << std::endl;
@@ -247,6 +246,7 @@ void AutoTuner::update_thread() {
     std::cerr << "Initial hot set size limit: " << initial_hot_set_size_limit
               << std::endl;
 
+    uint64_t phy_size_limit = ralt ? ralt->GetPhySizeLimit() : 0;
     std::cerr << "Initial physical size limit: " << phy_size_limit << std::endl;
   }
 
@@ -256,7 +256,6 @@ void AutoTuner::update_thread() {
   bool warming_up = true;
   while (!stop_signal_) {
     if (ralt) {
-      uint64_t real_hot_set_size = ralt->GetRealHotSetSize();
       if (warming_up) {
         // Require DecayCount > 0 so that RealPhySize is updated.
         if (ralt->DecayCount() > 0 &&
@@ -264,13 +263,15 @@ void AutoTuner::update_thread() {
           warming_up = false;
         }
       }
-      if (!warming_up) {
-        uint64_t real_phy_size = ralt->GetRealPhySize();
-        std::cerr << "real_phy_size " << real_phy_size << '\n';
-        auto rate = real_phy_size / (double)real_hot_set_size;
-        std::cerr << "rate " << rate << std::endl;
+      uint64_t real_phy_size = ralt->GetRealPhySize();
+      uint64_t real_hot_set_size = ralt->GetRealHotSetSize();
+      uint64_t phy_size_limit = real_phy_size;
+      if (real_hot_set_size > 0) {
+        double rate = real_phy_size / (double)real_hot_set_size;
         auto delta = rate * max_unstable_record_size_;
-        phy_size_limit = real_phy_size + delta;
+        phy_size_limit += delta;
+      }
+      if (!warming_up) {
         ralt->SetPhysicalSizeLimit(phy_size_limit);
         std::cerr << "Update physical size limit: " << phy_size_limit
                   << std::endl;
