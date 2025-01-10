@@ -19,7 +19,7 @@ class AutoTuner {
  public:
   AutoTuner(rocksdb::DB &db, size_t first_level_in_sd,
             double max_hot_ratio_in_last_level_in_fd,
-            uint64_t max_unstable_record_size, size_t wait_time_ns = 20e9)
+            uint64_t max_unstable_record_size, size_t wait_time_ns = 1e9)
       : db_(db),
         first_level_in_sd_(first_level_in_sd),
         wait_time_ns_(wait_time_ns),
