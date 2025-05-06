@@ -265,10 +265,6 @@ void AutoTuner::update_thread() {
       }
       uint64_t real_phy_size = ralt->GetRealPhySize();
       uint64_t real_hot_set_size = ralt->GetRealHotSetSize();
-      if (real_hot_set_size > 0) {
-        std::cerr << "RALT enabled" << std::endl;
-        db_.SetOptions({{"disable_hotrap", "false"}});
-      }
       uint64_t phy_size_limit = real_phy_size;
       if (real_hot_set_size > 0) {
         double rate = real_phy_size / (double)real_hot_set_size;
